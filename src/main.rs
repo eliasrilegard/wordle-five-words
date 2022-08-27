@@ -66,7 +66,7 @@ fn main() {
 
   println!("{} raw words", raw_words.len());
   println!("{} cooked words", length);
-  
+
   let mut skip: Vec<Vec<usize>> = vec![vec![0; length + 1]; length];
   for i in 0..length {
     skip[i][length] = length; // 5182
@@ -90,10 +90,6 @@ fn main() {
     let mut j = first[i];
     while j < length {
       let b = cooked_words[j];
-      if a & b != 0 {
-        j = skip[i][j + 1];
-        continue;
-      }
       let ab = a | b;
       
       let mut k = first[j];
