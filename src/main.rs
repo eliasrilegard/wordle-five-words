@@ -3,7 +3,8 @@ use std::{
       BufRead,
       BufReader
     },
-    fs::File
+    fs::File,
+    time::Instant
   };
   
 fn load_words(path: &str) -> Vec<String> {
@@ -49,6 +50,8 @@ fn visualize_word(mut word: i32) -> String {
 }
 
 fn main() {
+  let timer = Timer::new();
+
   let raw_words = load_words("src/words.txt");
   let mut cooked_words = raw_words.iter().clone()
     .map(encode_word)
@@ -61,6 +64,8 @@ fn main() {
 
   println!("{} raw words", raw_words.len());
   println!("{} cooked words", length);
+
+  let mut count = 0;
 
   for i in 0..length {
     // println!("{}", i);
@@ -84,12 +89,47 @@ fn main() {
           for m in (l + 1)..length {
             let e = cooked_words[m];
             if abcd & e != 0 { continue }
+            count += 1;
 
             let decoded = decode_words(vec![a, b, c, d, e], &raw_words);
-            println!("{}\n", decoded);
+            println!(
+              "[{time}] Solution {count}\n{words}\n",
+              words = decoded,
+              time = timer.elapsed_time(),
+              count = count
+            );
           }
         }
       }
     }
+  }
+  println!(
+    "Completion time: {time}\n{count} solutions found.",
+    time = timer.elapsed_time(),
+    count = count
+  );
+}
+
+struct Timer {
+  start: Instant
+}
+
+impl Timer {
+  fn new() -> Timer {
+    Timer { start: Instant::now() }
+  }
+
+  fn elapsed_time(&self) -> String {
+    let mut duration = self.start.elapsed().as_millis();
+    let hours = duration / 3_600_000;
+
+    duration = duration - hours * 3_600_000;
+    let minutes = duration / 60_000;
+
+    duration = duration - minutes * 60_000;
+    let seconds = duration / 1_000;
+
+    duration = duration - seconds * 1_000;
+    format!("{:0>2}:{:0>2}:{:0>2}.{:0>3}", hours, minutes, seconds, duration)
   }
 }
