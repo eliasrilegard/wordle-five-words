@@ -72,13 +72,13 @@ fn main() {
    * letters with a given word with index A, starting at any starting point B.
    * Basically: The first word at or after B that doesn't collide with A.
    */
-  let mut skip: Vec<Vec<usize>> = vec![vec![0; length + 1]; length];
+  let mut skip: Vec<Vec<u16>> = vec![vec![0; length + 1]; length];
   for i in 0..length {
-    skip[i][length] = length; // 5182
+    skip[i][length] = length as u16; // 5182
     let a = cooked_words[i];
     for j in (i..length).rev() {
       let b = cooked_words[j];
-      skip[i][j] = if a & b == 0 { j } else { skip[i][j + 1] }
+      skip[i][j] = if a & b == 0 { j as u16 } else { skip[i][j + 1] }
     }
   }
   /*
@@ -96,40 +96,40 @@ fn main() {
     // println!("{}", i);
     let a = cooked_words[i];
 
-    let mut j = first[i];
+    let mut j = first[i] as usize;
     while j < length {
       let b = cooked_words[j];
       let ab = a | b;
       
-      let mut k = first[j];
+      let mut k = first[j] as usize;
       while k < length {
         let c = cooked_words[k];
         if ab & c != 0 {
-          k = skip[i][k + 1];
-          k = skip[j][k];
+          k = skip[i][k + 1] as usize;
+          k = skip[j][k] as usize;
           continue;
         }
         let abc = ab | c;
         
-        let mut l = first[k];
+        let mut l = first[k] as usize;
         while l < length {
           let d = cooked_words[l];
           if abc & d != 0 {
-            l = skip[i][l + 1];
-            l = skip[j][l];
-            l = skip[k][l];
+            l = skip[i][l + 1] as usize;
+            l = skip[j][l] as usize;
+            l = skip[k][l] as usize;
             continue;
           }
           let abcd = abc | d;
           
-          let mut m = first[l];
+          let mut m = first[l] as usize;
           while m < length {
             let e = cooked_words[m];
             if abcd & e != 0 {
-              m = skip[i][m + 1];
-              m = skip[j][m];
-              m = skip[k][m];
-              m = skip[l][m];
+              m = skip[i][m + 1] as usize;
+              m = skip[j][m] as usize;
+              m = skip[k][m] as usize;
+              m = skip[l][m] as usize;
               continue;
             }
             count += 1;
@@ -142,19 +142,19 @@ fn main() {
               count = count
             );
 
-            m = skip[i][m + 1]; // Go to the next word, find word that doesn't collide with A
-            m = skip[j][m]; // Then find the word that doesn't collide with B
-            m = skip[k][m]; // -- // -- C
-            m = skip[l][m]; // -- // -- D
+            m = skip[i][m + 1] as usize; // Go to the next word, find word that doesn't collide with A
+            m = skip[j][m] as usize; // Then find the word that doesn't collide with B
+            m = skip[k][m] as usize; // -- // -- C
+            m = skip[l][m] as usize; // -- // -- D
           }
-          l = skip[i][l + 1];
-          l = skip[j][l];
-          l = skip[k][l];
+          l = skip[i][l + 1] as usize;
+          l = skip[j][l] as usize;
+          l = skip[k][l] as usize;
         }
-        k = skip[i][k + 1];
-        k = skip[j][k];
+        k = skip[i][k + 1] as usize;
+        k = skip[j][k] as usize;
       }
-      j = skip[i][j + 1];
+      j = skip[i][j + 1] as usize;
     }
   }
   println!(
