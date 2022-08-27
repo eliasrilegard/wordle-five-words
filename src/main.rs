@@ -67,6 +67,11 @@ fn main() {
   println!("{} raw words", raw_words.len());
   println!("{} cooked words", length);
 
+  /*
+   * Generate a table storing the index of the first word that doesn't share any
+   * letters with a given word with index A, starting at any starting point B.
+   * Basically: The first word at or after B that doesn't collide with A.
+   */
   let mut skip: Vec<Vec<usize>> = vec![vec![0; length + 1]; length];
   for i in 0..length {
     skip[i][length] = length; // 5182
@@ -76,6 +81,10 @@ fn main() {
       skip[i][j] = if a & b == 0 { j } else { skip[i][j + 1] }
     }
   }
+  /*
+   * Practically the same as doing skip[x][y] on j,k,l,m assignments,
+   * but storing these values in a smaller array is easier on the CPU cache
+   */
   let mut first = vec![0; length];
   for i in 0..length {
     first[i] = skip[i][i];
@@ -133,10 +142,10 @@ fn main() {
               count = count
             );
 
-            m = skip[i][m + 1];
-            m = skip[j][m];
-            m = skip[k][m];
-            m = skip[l][m];
+            m = skip[i][m + 1]; // Go to the next word, find word that doesn't collide with A
+            m = skip[j][m]; // Then find the word that doesn't collide with B
+            m = skip[k][m]; // -- // -- C
+            m = skip[l][m]; // -- // -- D
           }
           l = skip[i][l + 1];
           l = skip[j][l];
