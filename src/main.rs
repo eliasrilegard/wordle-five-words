@@ -1,12 +1,14 @@
 use std::{
-    io::{
-      BufRead,
-      BufReader
-    },
-    fs::File,
-    time::Instant
-  };
-  
+  io::{
+    BufRead,
+    BufReader
+  },
+  fs::File
+};
+
+mod timer;
+use timer::Timer;
+
 fn load_words(path: &str) -> Vec<String> {
   let file = File::open(path).unwrap();
   BufReader::new(file).lines()
@@ -108,28 +110,4 @@ fn main() {
     time = timer.elapsed_time(),
     count = count
   );
-}
-
-struct Timer {
-  start: Instant
-}
-
-impl Timer {
-  fn new() -> Timer {
-    Timer { start: Instant::now() }
-  }
-
-  fn elapsed_time(&self) -> String {
-    let mut duration = self.start.elapsed().as_millis();
-    let hours = duration / 3_600_000;
-
-    duration = duration - hours * 3_600_000;
-    let minutes = duration / 60_000;
-
-    duration = duration - minutes * 60_000;
-    let seconds = duration / 1_000;
-
-    duration = duration - seconds * 1_000;
-    format!("{:0>2}:{:0>2}:{:0>2}.{:0>3}", hours, minutes, seconds, duration)
-  }
 }
