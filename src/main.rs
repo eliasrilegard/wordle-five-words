@@ -66,6 +66,20 @@ fn main() {
 
   println!("{} raw words", raw_words.len());
   println!("{} cooked words", length);
+  
+  let mut skip: Vec<Vec<usize>> = vec![vec![0; length + 1]; length];
+  for i in 0..length {
+    skip[i][length] = length; // 5182
+    let a = cooked_words[i];
+    for j in (i..length).rev() {
+      let b = cooked_words[j];
+      skip[i][j] = if a & b == 0 { j } else { skip[i][j + 1] }
+    }
+  }
+  let mut first = vec![0; length];
+  for i in 0..length {
+    first[i] = skip[i][i];
+  }
 
   let mut count = 0;
 
@@ -73,24 +87,46 @@ fn main() {
     // println!("{}", i);
     let a = cooked_words[i];
 
-    for j in (i + 1)..length {
+    let mut j = first[i];
+    while j < length {
       let b = cooked_words[j];
-      if a & cooked_words[j] != 0 { continue; }
+      if a & b != 0 {
+        j = skip[i][j + 1];
+        continue;
+      }
       let ab = a | b;
-
-      for k in (j + 1)..length {
+      
+      let mut k = first[j];
+      while k < length {
         let c = cooked_words[k];
-        if ab & c != 0 { continue; }
+        if ab & c != 0 {
+          k = skip[i][k + 1];
+          k = skip[j][k];
+          continue;
+        }
         let abc = ab | c;
-
-        for l in (k + 1)..length {
+        
+        let mut l = first[k];
+        while l < length {
           let d = cooked_words[l];
-          if abc & d != 0 { continue; }
+          if abc & d != 0 {
+            l = skip[i][l + 1];
+            l = skip[j][l];
+            l = skip[k][l];
+            continue;
+          }
           let abcd = abc | d;
-
-          for m in (l + 1)..length {
+          
+          let mut m = first[l];
+          while m < length {
             let e = cooked_words[m];
-            if abcd & e != 0 { continue }
+            if abcd & e != 0 {
+              m = skip[i][m + 1];
+              m = skip[j][m];
+              m = skip[k][m];
+              m = skip[l][m];
+              continue;
+            }
             count += 1;
 
             let decoded = decode_words(vec![a, b, c, d, e], &raw_words);
@@ -100,9 +136,20 @@ fn main() {
               time = timer.elapsed_time(),
               count = count
             );
+
+            m = skip[i][m + 1];
+            m = skip[j][m];
+            m = skip[k][m];
+            m = skip[l][m];
           }
+          l = skip[i][l + 1];
+          l = skip[j][l];
+          l = skip[k][l];
         }
+        k = skip[i][k + 1];
+        k = skip[j][k];
       }
+      j = skip[i][j + 1];
     }
   }
   println!(
