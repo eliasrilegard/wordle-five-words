@@ -38,25 +38,33 @@ fn encode_word(word: &String, weights: &Vec<u32>) -> Word {
   Word { name: word.to_string(), bitset }
 }
 
-fn decode_words(words: Vec<i32>, raw: &Vec<String>) -> String {
-  words.iter()
-    .map(|word| decode_word(word, raw))
+fn decode_words(indices: Vec<u32>, words: &Vec<Word>, letters: &Vec<Letter>) -> String {
+  indices.iter()
+    .map(|&index| decode_index(index, words, letters))
     .collect::<Vec<_>>()
     .join("\n")
 }
 
-fn decode_word(word: &i32, raw: &Vec<String>) -> String {
-  let matches = raw.iter().filter(|raw| encode_word(raw) == *word).map(|word| word.clone()).collect::<Vec<_>>();
-  format!("{} {}", visualize_word(word.clone()), matches.join("/"))
+fn decode_index(index: u32, words: &Vec<Word>, letters: &Vec<Letter>) -> String {
+  let i = index as usize;
+  let bitset = words[i].bitset;
+  let mut name = words[i].name.clone();
+  let mut j = i + 1;
+  while words[j].bitset == bitset {
+    name.push_str(&(String::from("/") + &words[j].name));
+    j += 1;
+  }
+  format!("{} {}", visualize_word(bitset, letters), name)
 }
 
-fn visualize_word(mut word: i32) -> String {
+fn visualize_word(bitset: u32, letters: &Vec<Letter>) -> String {
   let mut chars: [char; 26] = ['-'; 26];
-  word <<= 6;
+  let mut word = (bitset << 6) as i32;
 
-  for i in 0..chars.len() {
+  for letter in letters {
+    let character = letter.name;
     if word < 0 {
-      chars[i] = char::from_u32('A' as u32 + i as u32).unwrap();
+      chars[alphabet_index(character)] = char::from_u32(character as u32 - 32).unwrap();
     }
     word <<= 1;
   }
@@ -85,7 +93,7 @@ fn main() {
   for i in 0..26 {
     letter_weights[alphabet_index(letters[i].name)] = 1 << 25 >> i;
   }
-  
+
   // Array of all words, sorted such that anagrams are adjacent
   let mut words = raw_words.iter().clone()
     .map(|word| encode_word(word, &letter_weights))
@@ -100,10 +108,23 @@ fn main() {
   */
   let xq = 1 << 25 | 1 << 24;
   let split = words.iter().position(|w| w.bitset & xq == 0).unwrap();
+  
+  let mut cooked_words = words.iter().map(|w| w.bitset).collect::<Vec<_>>();
+  cooked_words.dedup();
 
+  /*
+   * Array of indices for which all the words at and after are anagrams.
+   * Each index is the corresponding cooked word's index in words.
+   * Makes looking the word back up when a solution is found much faster.
+   */
+  let indices = cooked_words.iter()
+    .map(|&bitset| {
+      words.iter().position(|w| w.bitset == bitset).unwrap() as u32
+    }).collect::<Vec<_>>();
   let length = cooked_words.len();
 
   println!("{} raw words", raw_words.len());
+  println!("{} with 5 unique letters", words.len());
   println!("{} cooked words", length);
 
   /*
@@ -184,7 +205,7 @@ fn main() {
             }
             count += 1;
 
-            let decoded = decode_words(vec![a, b, c, d, e], &raw_words);
+            let decoded = decode_words(vec![indices[i], indices[j], indices[k], indices[l], indices[m]], &words, &letters);
             println!(
               "[{time}] Solution {count}\n{words}\n",
               words = decoded,
