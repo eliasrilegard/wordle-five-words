@@ -60,11 +60,12 @@ fn decode_index(index: u32, words: &Vec<Word>, letters: &Vec<Letter>) -> String 
 fn visualize_word(bitset: u32, letters: &Vec<Letter>) -> String {
   let mut chars: [char; 26] = ['-'; 26];
   let mut word = (bitset << 6) as i32;
+  let offset = 'a' as u32 - 'A' as u32;
 
   for letter in letters {
     let character = letter.name;
     if word < 0 {
-      chars[alphabet_index(character)] = char::from_u32(character as u32 - 32).unwrap();
+      chars[alphabet_index(character)] = char::from_u32(character as u32 - offset).unwrap();
     }
     word <<= 1;
   }
