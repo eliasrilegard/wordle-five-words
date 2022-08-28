@@ -14,6 +14,11 @@ struct Letter {
   occurences: u16
 }
 
+struct Word {
+  name: String,
+  bitset: u32
+}
+
 fn alphabet_index(letter: char) -> usize {
   letter as usize - 'a' as usize
 }
@@ -25,13 +30,12 @@ fn load_words(path: &str) -> Vec<String> {
     .collect::<Vec<String>>()
 }
 
-fn encode_word(word: &String) -> i32 {
+fn encode_word(word: &String, weights: &Vec<u32>) -> Word {
   let mut bitset = 0;
   for c in word.chars() {
-    let backshift = c as i32 - 96;
-    bitset |= 1 << 26 >> backshift;
+    bitset |= weights[alphabet_index(c)];
   }
-  bitset
+  Word { name: word.to_string(), bitset }
 }
 
 fn decode_words(words: Vec<i32>, raw: &Vec<String>) -> String {
@@ -81,13 +85,13 @@ fn main() {
   for i in 0..26 {
     letter_weights[alphabet_index(letters[i].name)] = 1 << 25 >> i;
   }
-
-  let mut cooked_words = raw_words.iter().clone()
-    .map(encode_word)
-    .filter(|word| word.count_ones() == 5)
+  
+  // Array of all words, sorted such that anagrams are adjacent
+  let mut words = raw_words.iter().clone()
+    .map(|word| encode_word(word, &letter_weights))
+    .filter(|word| word.bitset.count_ones() == 5)
     .collect::<Vec<_>>();
-  cooked_words.sort();
-  cooked_words.dedup();
+  words.sort_by(|a, b| b.bitset.cmp(&a.bitset));
 
   let length = cooked_words.len();
 
