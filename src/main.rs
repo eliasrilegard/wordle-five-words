@@ -71,23 +71,30 @@ fn main() {
    * Generate a table storing the index of the first word that doesn't share any
    * letters with a given word with index A, starting at any starting point B.
    * Basically: The first word at or after B that doesn't collide with A.
+   * This is now just a 1D array for performance reasons, but the functionality
+   * and purpose is still identical.
+   * Access to this "2D array" is always done in a [i * X + j] fashion,
+   * treat i and j as the two indices.
    */
-  let mut skip: Vec<Vec<u16>> = vec![vec![0; length + 1]; length];
-  for i in 0..length {
-    skip[i][length] = length as u16; // 5182
-    let a = cooked_words[i];
-    for j in (i..length).rev() {
-      let b = cooked_words[j];
-      skip[i][j] = if a & b == 0 { j as u16 } else { skip[i][j + 1] }
-    }
-  }
+  let mut skip: Vec<u16> = vec![0; length * (length + 1)];
   /*
-   * Practically the same as doing skip[x][y] on j,k,l,m assignments,
+   * Practically the same as doing skip[x][x] on j,k,l,m assignments,
    * but storing these values in a smaller array is easier on the CPU cache
    */
   let mut first = vec![0; length];
+
   for i in 0..length {
-    first[i] = skip[i][i];
+    let mut next = length as u16; // 5182
+    skip[i * (length + 1) + length] = next;
+    let a = cooked_words[i];
+    for j in (i..length).rev() {
+      let b = cooked_words[j];
+      if a & b == 0 {
+        next = j as u16
+      }
+      skip[i * (length + 1) + j] = next;
+    }
+    first[i] = skip[i * (length + 1) + i];
   }
 
   let mut count = 0;
@@ -95,41 +102,45 @@ fn main() {
   for i in 0..length {
     // println!("{}", i);
     let a = cooked_words[i];
+    let i_chunk = i * (length + 1);
 
     let mut j = first[i] as usize;
     while j < length {
       let b = cooked_words[j];
       let ab = a | b;
+      let j_chunk = j * (length + 1);
       
       let mut k = first[j] as usize;
       while k < length {
         let c = cooked_words[k];
         if ab & c != 0 {
-          k = skip[i][k + 1] as usize;
-          k = skip[j][k] as usize;
+          k = skip[i_chunk + k + 1] as usize;
+          k = skip[j_chunk + k] as usize;
           continue;
         }
         let abc = ab | c;
+        let k_chunk = k * (length + 1);
         
         let mut l = first[k] as usize;
         while l < length {
           let d = cooked_words[l];
           if abc & d != 0 {
-            l = skip[i][l + 1] as usize;
-            l = skip[j][l] as usize;
-            l = skip[k][l] as usize;
+            l = skip[i_chunk + l + 1] as usize;
+            l = skip[j_chunk + l] as usize;
+            l = skip[k_chunk + l] as usize;
             continue;
           }
           let abcd = abc | d;
+          let l_chunk = l * (length + 1);
           
           let mut m = first[l] as usize;
           while m < length {
             let e = cooked_words[m];
             if abcd & e != 0 {
-              m = skip[i][m + 1] as usize;
-              m = skip[j][m] as usize;
-              m = skip[k][m] as usize;
-              m = skip[l][m] as usize;
+              m = skip[i_chunk + m + 1] as usize;
+              m = skip[j_chunk + m] as usize;
+              m = skip[k_chunk + m] as usize;
+              m = skip[l_chunk + m] as usize;
               continue;
             }
             count += 1;
@@ -142,19 +153,19 @@ fn main() {
               count = count
             );
 
-            m = skip[i][m + 1] as usize; // Go to the next word, find word that doesn't collide with A
-            m = skip[j][m] as usize; // Then find the word that doesn't collide with B
-            m = skip[k][m] as usize; // -- // -- C
-            m = skip[l][m] as usize; // -- // -- D
+            m = skip[i_chunk + m + 1] as usize; // Go to the next word, find word that doesn't collide with A
+            m = skip[j_chunk + m] as usize; // Then find the word that doesn't collide with B
+            m = skip[k_chunk + m] as usize; // -- // -- C
+            m = skip[l_chunk + m] as usize; // -- // -- D
           }
-          l = skip[i][l + 1] as usize;
-          l = skip[j][l] as usize;
-          l = skip[k][l] as usize;
+          l = skip[i_chunk + l + 1] as usize;
+          l = skip[j_chunk + l] as usize;
+          l = skip[k_chunk + l] as usize;
         }
-        k = skip[i][k + 1] as usize;
-        k = skip[j][k] as usize;
+        k = skip[i_chunk + k + 1] as usize;
+        k = skip[j_chunk + k] as usize;
       }
-      j = skip[i][j + 1] as usize;
+      j = skip[i_chunk + j + 1] as usize;
     }
   }
   println!(
