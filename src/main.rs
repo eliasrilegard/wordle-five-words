@@ -9,6 +9,15 @@ use std::{
 mod timer;
 use timer::Timer;
 
+struct Letter {
+  name: char,
+  occurences: u16
+}
+
+fn alphabet_index(letter: char) -> usize {
+  letter as usize - 'a' as usize
+}
+
 fn load_words(path: &str) -> Vec<String> {
   let file = File::open(path).unwrap();
   BufReader::new(file).lines()
@@ -55,6 +64,24 @@ fn main() {
   let timer = Timer::new();
 
   let raw_words = load_words("src/words.txt");
+
+  let mut letters: Vec<Letter> = vec![];
+  for c in 'a'..='z' {
+    letters.push(Letter { name: c, occurences: 0 });
+  }
+  for c in raw_words.join("").chars() {
+    if c == '\n' { continue; }
+    letters[alphabet_index(c)].occurences += 1;
+  }
+  letters.sort_by(|a, b| b.occurences.cmp(&a.occurences));
+  letters.rotate_right(2);
+
+  // Map every letter to a weight with respect to how common the letter is
+  let mut letter_weights = vec![0; 26];
+  for i in 0..26 {
+    letter_weights[alphabet_index(letters[i].name)] = 1 << 25 >> i;
+  }
+
   let mut cooked_words = raw_words.iter().clone()
     .map(encode_word)
     .filter(|word| word.count_ones() == 5)
