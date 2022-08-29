@@ -50,7 +50,7 @@ fn decode_index(index: u32, words: &Vec<Word>, letters: &Vec<Letter>) -> String 
   let bitset = words[i].bitset;
   let mut name = words[i].name.clone();
   let mut j = i + 1;
-  while words[j].bitset == bitset {
+  while j < words.len() && words[j].bitset == bitset {
     name.push_str(&(String::from("/") + &words[j].name));
     j += 1;
   }
@@ -98,7 +98,9 @@ fn main() {
   // Array of all words, sorted such that anagrams are adjacent
   let mut words = raw_words.iter().clone()
     .map(|word| encode_word(word, &letter_weights))
-    .filter(|word| word.bitset.count_ones() == 5)
+    .filter(|word| {
+      word.name.len() == 5 && word.bitset.count_ones() == 5
+    })
     .collect::<Vec<_>>();
   words.sort_by(|a, b| b.bitset.cmp(&a.bitset));
 
