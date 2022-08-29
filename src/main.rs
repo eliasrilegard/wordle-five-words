@@ -108,7 +108,7 @@ fn main() {
    * Find index of the first word that doesn't have any of the two rarest letters.
    * The variable name here is a reference to what two letters are the rarest,
    * but the code figures this out on the fly.
-  */
+   */
   let xq = 1 << 25 | 1 << 24;
   let split = words.iter().position(|w| w.bitset & xq == 0).unwrap();
   
