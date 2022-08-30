@@ -103,17 +103,17 @@ fn main() {
     })
     .collect::<Vec<_>>();
   words.sort_by(|a, b| b.bitset.cmp(&a.bitset));
-
+  
+  let mut cooked_words = words.iter().map(|w| w.bitset).collect::<Vec<_>>();
+  cooked_words.dedup();
+  
   /*
    * Find index of the first word that doesn't have any of the two rarest letters.
    * The variable name here is a reference to what two letters are the rarest,
    * but the code figures this out on the fly.
    */
   let xq = 1 << 25 | 1 << 24;
-  let split = words.iter().position(|w| w.bitset & xq == 0).unwrap();
-  
-  let mut cooked_words = words.iter().map(|w| w.bitset).collect::<Vec<_>>();
-  cooked_words.dedup();
+  let split = cooked_words.iter().position(|w| w & xq == 0).unwrap();
 
   /*
    * Array of indices for which all the words at and after are anagrams.
