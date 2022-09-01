@@ -3,17 +3,24 @@ use std::{
     BufRead,
     BufReader
   },
-  fs::File
+  fs::File,
+  sync::{
+    Arc,
+    Mutex
+  },
+  thread
 };
 
 mod timer;
 use timer::Timer;
 
+#[derive(Clone)]
 struct Letter {
   name: char,
   occurences: u16
 }
 
+#[derive(Clone)]
 struct Word {
   name: String,
   bitset: u32
@@ -160,80 +167,104 @@ fn main() {
     first[i] = skip[i * (length + 1) + i];
   }
 
-  let mut count = 0;
+  let counter = Arc::new(Mutex::new(0));
 
-  for i in 0..split {
-    // println!("{}", i);
-    let a = cooked_words[i];
-    let i_chunk = i * (length + 1);
+  let cpu_count = thread::available_parallelism().unwrap().get();
+  let mut handles: Vec<thread::JoinHandle<()>> = vec![];
 
-    let mut j = first[i] as usize;
-    while j < length {
-      let b = cooked_words[j];
-      let ab = a | b;
-      let j_chunk = j * (length + 1);
-      
-      let mut k = first[j] as usize;
-      while k < length {
-        let c = cooked_words[k];
-        if ab & c != 0 {
-          k = skip[i_chunk + k + 1] as usize;
-          k = skip[j_chunk + k] as usize;
-          continue;
-        }
-        let abc = ab | c;
-        let k_chunk = k * (length + 1);
+  for t in 0..cpu_count {
+    let range = (t..split).step_by(cpu_count);
+    let counter_t = Arc::clone(&counter);
+    
+    let cooked_words_t = cooked_words.clone();
+    let indices_t = indices.clone();
+    let first_t = first.clone();
+    let skip_t = skip.clone();
+    let timer_t = timer.clone();
+    let letters_t = letters.clone();
+    let words_t = words.clone();
+    
+    let handle = thread::spawn(move || {
+      for i in range {
+        // println!("{}", i);
+        let a = cooked_words_t[i];
+        let i_chunk = i * (length + 1);
         
-        let mut l = first[k] as usize;
-        while l < length {
-          let d = cooked_words[l];
-          if abc & d != 0 {
-            l = skip[i_chunk + l + 1] as usize;
-            l = skip[j_chunk + l] as usize;
-            l = skip[k_chunk + l] as usize;
-            continue;
-          }
-          let abcd = abc | d;
-          let l_chunk = l * (length + 1);
+        let mut j = first_t[i] as usize;
+        while j < length {
+          let b = cooked_words_t[j];
+          let ab = a | b;
+          let j_chunk = j * (length + 1);
           
-          let mut m = first[l] as usize;
-          while m < length {
-            let e = cooked_words[m];
-            if abcd & e != 0 {
-              m = skip[i_chunk + m + 1] as usize;
-              m = skip[j_chunk + m] as usize;
-              m = skip[k_chunk + m] as usize;
-              m = skip[l_chunk + m] as usize;
+          let mut k = first_t[j] as usize;
+          while k < length {
+            let c = cooked_words_t[k];
+            if ab & c != 0 {
+              k = skip_t[i_chunk + k + 1] as usize;
+              k = skip_t[j_chunk + k] as usize;
               continue;
             }
-            count += 1;
+            let abc = ab | c;
+            let k_chunk = k * (length + 1);
+            
+            let mut l = first_t[k] as usize;
+            while l < length {
+              let d = cooked_words_t[l];
+              if abc & d != 0 {
+                l = skip_t[i_chunk + l + 1] as usize;
+                l = skip_t[j_chunk + l] as usize;
+                l = skip_t[k_chunk + l] as usize;
+                continue;
+              }
+              let abcd = abc | d;
+              let l_chunk = l * (length + 1);
+              
+              let mut m = first_t[l] as usize;
+              while m < length {
+                let e = cooked_words_t[m];
+                if abcd & e != 0 {
+                  m = skip_t[i_chunk + m + 1] as usize;
+                  m = skip_t[j_chunk + m] as usize;
+                  m = skip_t[k_chunk + m] as usize;
+                  m = skip_t[l_chunk + m] as usize;
+                  continue;
+                }
+                let mut count = counter_t.lock().unwrap();
+                *count += 1;
 
-            let decoded = decode_words(vec![indices[i], indices[j], indices[k], indices[l], indices[m]], &words, &letters);
-            println!(
-              "[{time}] Solution {count}\n{words}\n",
-              words = decoded,
-              time = timer.elapsed_time(),
-              count = count
-            );
+                let decoded = decode_words(vec![indices_t[i], indices_t[j], indices_t[k], indices_t[l], indices_t[m]], &words_t, &letters_t);
+                println!(
+                  "[{time}] Solution {count}\n{words}\n",
+                  words = decoded,
+                  time = timer_t.elapsed_time(),
+                  count = count
+                );
 
-            m = skip[i_chunk + m + 1] as usize; // Go to the next word, find word that doesn't collide with A
-            m = skip[j_chunk + m] as usize; // Then find the word that doesn't collide with B
-            m = skip[k_chunk + m] as usize; // -- // -- C
-            m = skip[l_chunk + m] as usize; // -- // -- D
+                m = skip_t[i_chunk + m + 1] as usize; // Go to the next word, find word that doesn't collide with A
+                m = skip_t[j_chunk + m] as usize; // Then find the word that doesn't collide with B
+                m = skip_t[k_chunk + m] as usize; // -- // -- C
+                m = skip_t[l_chunk + m] as usize; // -- // -- D
+              }
+              l = skip_t[i_chunk + l + 1] as usize;
+              l = skip_t[j_chunk + l] as usize;
+              l = skip_t[k_chunk + l] as usize;
+            }
+            k = skip_t[i_chunk + k + 1] as usize;
+            k = skip_t[j_chunk + k] as usize;
           }
-          l = skip[i_chunk + l + 1] as usize;
-          l = skip[j_chunk + l] as usize;
-          l = skip[k_chunk + l] as usize;
+          j = skip_t[i_chunk + j + 1] as usize;
         }
-        k = skip[i_chunk + k + 1] as usize;
-        k = skip[j_chunk + k] as usize;
       }
-      j = skip[i_chunk + j + 1] as usize;
-    }
+    });
+
+    handles.push(handle);
+  }
+  for h in handles {
+    h.join().unwrap();
   }
   println!(
     "Completion time: {time}\n{count} solutions found.",
     time = timer.elapsed_time(),
-    count = count
+    count = *counter.lock().unwrap()
   );
 }
